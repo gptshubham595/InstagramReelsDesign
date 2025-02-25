@@ -1,0 +1,34 @@
+flowchart TD
+    subgraph Client
+        UA[User App]
+        VC[Video Cache]
+        PM[Playback Manager]
+    end
+    
+    subgraph Backend
+        API[API Gateway]
+        VMS[Video Metadata Service]
+        TS[Transcoding Service]
+        CS[Chunk Storage]
+        MS[Metadata Storage]
+    end
+
+    subgraph _CDN
+        CDN[Content Delivery Network]
+    end
+
+    UA -->|Request Feed| API
+    API -->|Get Video Metadata| VMS
+    VMS -->|Return Manifest Files| API
+    API -->|Return Feed with Video Manifests| UA
+    
+    PM -->|Request Video Chunks| CDN
+    CDN -->|Deliver Chunks| PM
+    CDN -->|Cache Chunks| CS
+    
+    TS -->|Process & Chunk Videos| CS
+    TS -->|Store Metadata| MS
+    VMS -->|Read Metadata| MS
+    
+    PM -->|Store Chunks| VC
+    
