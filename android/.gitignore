@@ -1,0 +1,10 @@
+.idea
+.idea/vcs.xml
+.gradle
+.gradle/*
+build
+app/build
+core/build
+data/build
+domain/build
+presentation/build
