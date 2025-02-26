@@ -51,6 +51,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    implementation(libs.exoplayer.core)
+    implementation(libs.exoplayer.ui)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
