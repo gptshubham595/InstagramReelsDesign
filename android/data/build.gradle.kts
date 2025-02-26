@@ -54,4 +54,6 @@ dependencies {
 
     implementation(libs.kotlinx.serialization)
 
+    debugImplementation(libs.chucker.library)
+
 }

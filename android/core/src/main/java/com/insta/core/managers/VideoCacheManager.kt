@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.insta.domain.models.VideoResponse
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -19,7 +20,7 @@ import javax.inject.Singleton
 @UnstableApi
 @Singleton
 class VideoCacheManager @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient
 ) {
     companion object {

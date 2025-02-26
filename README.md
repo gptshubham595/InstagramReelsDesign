@@ -30,6 +30,8 @@ DASH uses MPD (Media Presentation Description) files and MP4 segments
 - npm start // to start the server
 - create a folder video outside and web and put all videos there
 - npm process-video.js // to convert videos into low, medium, high chunks each of 3sec
+- ngrok http 3000
+- replace BASE_URL in Android
 
 ![API FEED](https://github.com/gptshubham595/InstagramReelsDesign/blob/main/api-feed.png)
 ![PROCESS VIDEO](https://github.com/gptshubham595/InstagramReelsDesign/blob/main/process-video.png)
@@ -39,4 +41,5 @@ DASH uses MPD (Media Presentation Description) files and MP4 segments
 - GET /api/videos/:videoId - Get full video details with all chunks
 - GET /process - Get full video details with all chunks
 - GET /api/status - Check server status
+
 
