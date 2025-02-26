@@ -23,3 +23,18 @@ The client decides which chunks to download based on viewing behavior
 
 HLS uses .m3u8 playlist files and .ts segment files
 DASH uses MPD (Media Presentation Description) files and MP4 segments
+
+### Setup 
+
+- npm i // to install dependencies
+- npm start // to start the server
+- create a folder video outside and web and put all videos there
+- npm process-video.js // to convert videos into low, medium, high chunks each of 3sec
+
+
+## API Endpoints:
+- GET /api/feed?page=0&pageSize=5 - Get paginated video feed
+- GET /api/videos/:videoId - Get full video details with all chunks
+- GET /process - Get full video details with all chunks
+- GET /api/status - Check server status
+
