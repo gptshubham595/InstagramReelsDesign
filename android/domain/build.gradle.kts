@@ -1,7 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    kotlin("kapt")
+    //kotlin("kapt")
+    alias(libs.plugins.kotlinx.serialization)
     alias(libs.plugins.hilt.android.plugin)
     alias(libs.plugins.ksp.android.plugin)
 }
