@@ -11,10 +11,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
+const val BASE_URL = "https://10e3-49-43-242-243.ngrok-free.app/"
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    private const val BASE_URL = "https://f985-123-63-206-73.ngrok-free.app/"
+
 
     @Provides
     @Singleton

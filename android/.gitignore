@@ -8,3 +8,5 @@ core/build
 data/build
 domain/build
 presentation/build
+.DS_Store
+*/.DS_Store

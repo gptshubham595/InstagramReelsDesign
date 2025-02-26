@@ -49,4 +49,19 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
+
+    implementation(libs.androidx.media3.datasource)
+    implementation(libs.androidx.media3.database)
+    implementation(libs.androidx.media3.dash)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.ui)
+
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson.converter)
+    implementation(libs.logging.intercepter)
+
+    implementation(libs.okhttp3)
+
+    implementation(libs.kotlinx.serialization)
 }

@@ -10,6 +10,8 @@ import com.insta.domain.models.VideoResponse
 import com.insta.domain.repository.VideoRepository
 import javax.inject.Inject
 
+const val BASE_URL = "https://10e3-49-43-242-243.ngrok-free.app"
+
 class VideoRepositoryImpl @Inject constructor(private val apiService: ApiService) :
     VideoRepository {
     override suspend fun getFeed(page: Int): List<VideoResponse> {
@@ -27,7 +29,8 @@ private fun VideoResponseDTO.toVideoResponse(): VideoResponse {
         title = title,
         description = description,
         duration = duration,
-        thumbnail = thumbnail,
+        dashManifest = BASE_URL + dashManifest,
+        thumbnail = BASE_URL + thumbnail,
         firstChunk = firstChunk?.toChunkResponse(),
         chunks = chunks?.map { it.toChunkResponse() }
     )
@@ -44,9 +47,9 @@ private fun ChunkDTO.toChunkResponse(): Chunk {
 
 private fun UrlsDTO.toUrlResponse(): Urls {
     return Urls(
-        high = high,
-        medium = medium,
-        low = low
+        high = BASE_URL + high,
+        medium = BASE_URL + medium,
+        low = BASE_URL + low
     )
 }
 
