@@ -1,0 +1,52 @@
+package com.insta.core.repository
+
+import com.insta.data.models.ChunkDTO
+import com.insta.data.models.UrlsDTO
+import com.insta.data.models.VideoResponseDTO
+import com.insta.data.network.ApiService
+import com.insta.domain.models.Chunk
+import com.insta.domain.models.Urls
+import com.insta.domain.models.VideoResponse
+import com.insta.domain.repository.VideoRepository
+import javax.inject.Inject
+
+class VideoRepositoryImpl @Inject constructor(private val apiService: ApiService) :
+    VideoRepository {
+    override suspend fun getFeed(page: Int): List<VideoResponse> {
+        return apiService.getFeed(page).videos.map { it.toVideoResponse() }
+    }
+
+    override suspend fun getVideo(videoId: String): VideoResponse {
+        return apiService.getVideo(videoId).toVideoResponse()
+    }
+}
+
+private fun VideoResponseDTO.toVideoResponse(): VideoResponse {
+    return VideoResponse(
+        id = id,
+        title = title,
+        description = description,
+        duration = duration,
+        thumbnail = thumbnail,
+        firstChunk = firstChunk?.toChunkResponse(),
+        chunks = chunks?.map { it.toChunkResponse() }
+    )
+}
+
+private fun ChunkDTO.toChunkResponse(): Chunk {
+    return Chunk(
+        index = index,
+        startTime = startTime,
+        duration = duration,
+        urls = urls?.toUrlResponse()
+    )
+}
+
+private fun UrlsDTO.toUrlResponse(): Urls {
+    return Urls(
+        high = high,
+        medium = medium,
+        low = low
+    )
+}
+

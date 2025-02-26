@@ -1,9 +1,11 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    kotlin("kapt")
+    //kotlin("kapt")
+    alias(libs.plugins.kotlinx.serialization)
     alias(libs.plugins.hilt.android.plugin)
     alias(libs.plugins.ksp.android.plugin)
+    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -26,6 +28,11 @@ android {
             )
         }
     }
+
+    buildFeatures{
+        viewBinding = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -44,7 +51,18 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    implementation(libs.exoplayer.core)
+    implementation(libs.exoplayer.ui)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
+
+    implementation(libs.glide)
+    ksp(libs.glide.compiler)
+
+    implementation(libs.navigation.fragment)
+    implementation(libs.navigation.ui)
+
+    implementation(libs.androidx.activity)
+
 }

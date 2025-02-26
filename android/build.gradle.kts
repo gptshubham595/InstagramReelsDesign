@@ -6,4 +6,5 @@ plugins {
     alias(libs.plugins.hilt.android.plugin) apply false
     alias(libs.plugins.ksp.android.plugin) apply false
     alias(libs.plugins.kotlinx.serialization).apply(false)
+    id("androidx.navigation.safeargs.kotlin").version("2.4.2").apply(false)
 }
