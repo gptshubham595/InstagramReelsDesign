@@ -93,6 +93,7 @@ app.get('/api/feed', (req, res) => {
       description: video.description,
       duration: video.duration,
       thumbnail: video.thumbnail,
+      dashManifest: `/chunks/${video.id}/manifest.mpd`,
       // Only include the first chunk data for initial playback
       firstChunk: video.chunks.length > 0 ? {
         index: 0,
@@ -329,6 +330,7 @@ async function processVideo(videoPath, title, description) {
       title: title || 'Untitled Video',
       description: description || '',
       duration,
+      dashManifest: `/chunks/${videoId}/manifest.mpd`,
       thumbnail: `/thumbnail/${videoId}/thumbnail.jpg`,
       chunks: [],
       qualities,

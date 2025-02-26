@@ -29,6 +29,7 @@ private fun VideoResponseDTO.toVideoResponse(): VideoResponse {
         title = title,
         description = description,
         duration = duration,
+        dashManifest = BASE_URL + dashManifest,
         thumbnail = BASE_URL + thumbnail,
         firstChunk = firstChunk?.toChunkResponse(),
         chunks = chunks?.map { it.toChunkResponse() }

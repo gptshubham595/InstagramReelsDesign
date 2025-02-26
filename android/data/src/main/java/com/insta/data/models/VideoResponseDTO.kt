@@ -9,6 +9,7 @@ data class VideoResponseDTO(
     val description: String?,
     val duration: Double?,
     val thumbnail: String?,
+    val dashManifest: String?,
     val firstChunk: ChunkDTO?,
     val chunks: List<ChunkDTO>?
 )
