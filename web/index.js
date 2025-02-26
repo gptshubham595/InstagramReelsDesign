@@ -16,6 +16,7 @@ app.use(cors());
 app.use(express.json());
 app.use('/chunks', express.static(path.join(__dirname, 'chunks')));
 app.use('/videos', express.static(path.join(__dirname, '../videos')));
+app.use('/metadata', express.static(path.join(__dirname, 'metadata')));
 
 // Create necessary directories
 fs.ensureDirSync(path.join(__dirname, 'chunks'));

@@ -42,7 +42,7 @@ glide-compiler = { group = "com.github.bumptech.glide", name = "ksp", version.re
 retrofit={group="com.squareup.retrofit2",name="retrofit",version.ref="retrofit"}
 retrofit-gson-converter={group="com.squareup.retrofit2",name="converter-gson",version.ref="retrofit"}
 logging-intercepter={group="com.squareup.okhttp3",name="logging-interceptor",version.ref="logging-interceptor"}
-
+kotlinx-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.8.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

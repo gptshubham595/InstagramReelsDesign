@@ -1,5 +1,8 @@
 package com.insta.data.models
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class VideoResponseDTO(
     val id: String?,
     val title: String?,
