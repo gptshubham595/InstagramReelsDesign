@@ -66,11 +66,11 @@ class FeedFragment : Fragment() {
                     else -> {
                         binding.progressBar.visibility = View.GONE
                         binding.errorText.visibility = View.GONE
-//                        feedAdapter.videos.addAll(state.videos)
-//                        feedAdapter.notifyItemRangeInserted(
-//                            feedAdapter.videos.size - state.videos.size,
-//                            state.videos.size
-//                        )
+                        feedAdapter.videos.addAll(state.videos)
+                        feedAdapter.notifyItemRangeInserted(
+                            feedAdapter.videos.size - state.videos.size,
+                            state.videos.size
+                        )
                     }
                 }
             }

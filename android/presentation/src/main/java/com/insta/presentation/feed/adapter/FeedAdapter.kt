@@ -8,8 +8,8 @@ import com.insta.domain.models.VideoResponse
 import com.insta.presentation.databinding.ItemReelBinding
 
 class FeedAdapter(
-    private val videos: MutableList<VideoResponse>,
-    private val onVideoClick: (String) -> Unit
+    val videos: MutableList<VideoResponse>,
+    val onVideoClick: (String) -> Unit
 ) : RecyclerView.Adapter<FeedAdapter.ReelViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ReelViewHolder {
