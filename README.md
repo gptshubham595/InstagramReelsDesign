@@ -31,6 +31,8 @@ DASH uses MPD (Media Presentation Description) files and MP4 segments
 - create a folder video outside and web and put all videos there
 - npm process-video.js // to convert videos into low, medium, high chunks each of 3sec
 
+![API FEED](https://github.com/gptshubham595/InstagramReelsDesign/blob/main/api-feed.png)
+![PROCESS VIDEO](https://github.com/gptshubham595/InstagramReelsDesign/blob/main/process-video.png)
 
 ## API Endpoints:
 - GET /api/feed?page=0&pageSize=5 - Get paginated video feed
