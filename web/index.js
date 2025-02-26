@@ -4,6 +4,8 @@ const fs = require('fs-extra');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 const cors = require('cors');
+const mpd_generator = require('mpd-generator');
+const multer = require('multer');
 
 // Set ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -17,10 +19,12 @@ app.use(express.json());
 app.use('/chunks', express.static(path.join(__dirname, 'chunks')));
 app.use('/videos', express.static(path.join(__dirname, '../videos')));
 app.use('/metadata', express.static(path.join(__dirname, 'metadata')));
+app.use('/thumbnail', express.static(path.join(__dirname, 'thumbnail')));
 
 // Create necessary directories
 fs.ensureDirSync(path.join(__dirname, 'chunks'));
 fs.ensureDirSync(path.join(__dirname, 'metadata'));
+fs.ensureDirSync(path.join(__dirname, 'thumbnail'));
 
 // Processing queue
 const processingQueue = [];
@@ -128,8 +132,7 @@ app.get('/api/videos/:videoId', (req, res) => {
   }
 });
 
-// Add these imports at the top of your index.js file
-const multer = require('multer');
+
 const upload = multer({ dest: path.join(__dirname, '../videos/uploads/') });
 
 // Make sure the upload directory exists
@@ -294,6 +297,7 @@ app.post('/api/process-video', (req, res) => {
 async function processVideo(videoPath, title, description) {
   const videoId = Date.now().toString();
   const outputDir = path.join(__dirname, 'chunks', videoId);
+  const thumbnailOutputDir = path.join(__dirname, 'thumbnail', videoId);
   fs.ensureDirSync(outputDir);
   
   console.log(`Processing video: ${videoPath} (ID: ${videoId})`);
@@ -325,7 +329,7 @@ async function processVideo(videoPath, title, description) {
       title: title || 'Untitled Video',
       description: description || '',
       duration,
-      thumbnail: `/chunks/${videoId}/thumbnail.jpg`,
+      thumbnail: `/thumbnail/${videoId}/thumbnail.jpg`,
       chunks: [],
       qualities,
       createdAt: new Date().toISOString()
@@ -373,7 +377,7 @@ async function processVideo(videoPath, title, description) {
     try {
       await createThumbnail(
         fullVideoPath,
-        path.join(outputDir, 'thumbnail.jpg')
+        path.join(thumbnailOutputDir, 'thumbnail.jpg')
       );
       console.log('Created thumbnail');
     } catch (err) {
@@ -381,12 +385,18 @@ async function processVideo(videoPath, title, description) {
       // Continue even if thumbnail creation fails
     }
     
-    // Save metadata to file
+    await generateDashManifest(
+      videoId,
+      duration,
+      manifestData.chunks,
+      qualities
+    );
+
+    // Save metadata to file AFTER DASH generation
     const metadataPath = path.join(__dirname, 'metadata', `${videoId}.json`);
     fs.writeJSONSync(metadataPath, manifestData);
-    
+
     console.log(`Video processing completed: ${videoId}`);
-    
     return {
       id: videoId,
       message: 'Video processed successfully',
@@ -396,6 +406,7 @@ async function processVideo(videoPath, title, description) {
     console.error('Error in video processing:', error);
     throw error;
   }
+
 }
 
 // Helper function to get video information
@@ -461,6 +472,88 @@ app.get('/api/status', (req, res) => {
     isProcessing
   });
 });
+
+async function generateDashManifest(videoId, duration, chunks, qualities) {
+  const outputDir = path.join(__dirname, 'chunks', videoId);
+  const manifestPath = path.join(outputDir, 'manifest.mpd');
+  
+  try {
+    // Create a standard MPD template that works with your chunked files
+    let mpdContent = `<?xml version="1.0" encoding="utf-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd" 
+    profiles="urn:mpeg:dash:profile:isoff-live:2011" 
+    type="static" 
+    minBufferTime="PT2S" 
+    mediaPresentationDuration="PT${Math.round(duration)}S">
+    <Period id="1" start="PT0S">`;
+    
+    // Add an adaptation set for each quality
+    for (const quality of qualities) {
+      // Convert bitrate from string (like "400k") to numeric value
+      const bitrate = parseInt(quality.videoBitrate.replace('k', '000'));
+      const [width, height] = quality.resolution.split('x').map(Number);
+      
+      mpdContent += `
+        <AdaptationSet 
+            mimeType="video/mp4" 
+            contentType="video"
+            segmentAlignment="true" 
+            bitstreamSwitching="true">
+            <Representation 
+                id="${quality.name}" 
+                bandwidth="${bitrate}" 
+                width="${width}" 
+                height="${height}" 
+                codecs="avc1.4D401F">
+                <SegmentList duration="${chunks[0].duration}">`;
+      
+      // Add each chunk as a segment
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkFile = `${videoId}_${quality.name}_chunk_${i}.mp4`;
+        
+        mpdContent += `
+                    <SegmentURL media="${chunkFile}" />`;
+      }
+      
+      mpdContent += `
+                </SegmentList>
+            </Representation>
+        </AdaptationSet>`;
+    }
+    
+    // Close the MPD structure
+    mpdContent += `
+    </Period>
+</MPD>`;
+    
+    // Write the MPD file
+    fs.writeFileSync(manifestPath, mpdContent);
+    console.log(`DASH Manifest generated at /chunks/${videoId}/manifest.mpd`);
+    return `/chunks/${videoId}/manifest.mpd`;
+  } catch (error) {
+    console.error("Error generating DASH manifest:", error);
+    throw error;
+  }
+}
+
+async function createInitSegment(videoId, quality, outputPath) {
+  const firstChunkPath = path.join(__dirname, 'chunks', videoId, `${videoId}_${quality.name}_chunk_0.mp4`);
+  
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(firstChunkPath)
+      .outputOptions([
+        '-codec copy',
+        '-movflags empty_moov+default_base_moof+frag_keyframe'
+      ])
+      .output(outputPath)
+      .on('end', resolve)
+      .on('error', reject)
+      .run();
+  });
+}
 
 // Start server
 app.listen(PORT, () => {

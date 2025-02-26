@@ -6,7 +6,9 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.insta.presentation.databinding.FragmentFeedBinding
 import com.insta.presentation.feed.adapter.FeedAdapter
@@ -49,31 +51,34 @@ class FeedFragment : Fragment() {
     }
 
     private fun observeFeedState() {
-        lifecycleScope.launch {
-            viewModel.feedState.collectLatest { state ->
-                when {
-                    state.isLoading -> {
-                        binding.progressBar.visibility = View.VISIBLE
-                        binding.errorText.visibility = View.GONE
-                    }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.feedState.collectLatest { state ->
+                    when {
+                        state.isLoading -> {
+                            binding.progressBar.visibility = View.VISIBLE
+                            binding.errorText.visibility = View.GONE
+                        }
 
-                    state.error != null -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorText.visibility = View.VISIBLE
-                        binding.errorText.text = state.error
-                    }
+                        state.error != null -> {
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorText.visibility = View.VISIBLE
+                            binding.errorText.text = state.error
+                        }
 
-                    else -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorText.visibility = View.GONE
-                        feedAdapter.videos.addAll(state.videos)
-                        feedAdapter.notifyItemRangeInserted(
-                            feedAdapter.videos.size - state.videos.size,
-                            state.videos.size
-                        )
+                        else -> {
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorText.visibility = View.GONE
+                            feedAdapter.videos.addAll(state.videos)
+                            feedAdapter.notifyItemRangeInserted(
+                                feedAdapter.videos.size - state.videos.size,
+                                state.videos.size
+                            )
+                        }
                     }
                 }
             }
+
         }
     }
 
