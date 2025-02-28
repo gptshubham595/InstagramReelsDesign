@@ -14,19 +14,19 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Global ExoPlayer view that will be positioned over the current item -->
-    <androidx.media3.ui.PlayerView
-        android:id="@+id/globalPlayerView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:surface_type="texture_view"
-        app:show_buffering="always"
-        app:use_controller="false"
-        app:resize_mode="zoom"
-        android:visibility="visible"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+<!--    <androidx.media3.ui.PlayerView-->
+<!--        android:id="@+id/globalPlayerView"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent"-->
+<!--        app:surface_type="texture_view"-->
+<!--        app:show_buffering="always"-->
+<!--        app:use_controller="false"-->
+<!--        app:resize_mode="zoom"-->
+<!--        android:visibility="visible"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent" />-->
 
     <ProgressBar
         android:id="@+id/progressBar"
