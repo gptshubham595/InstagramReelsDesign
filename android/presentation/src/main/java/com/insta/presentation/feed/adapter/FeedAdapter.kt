@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.core.net.toUri
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 
 @UnstableApi
@@ -35,6 +36,8 @@ class FeedAdapter @Inject constructor(
     private val exoPlayerProvider: ExoPlayerProvider,
     val videos: MutableList<VideoResponse> = mutableListOf()
 ) : RecyclerView.Adapter<FeedAdapter.ReelViewHolder>() {
+
+    private var recyclerView: RecyclerView? = null
 
     companion object {
         private const val TAG = "FeedAdapter"
@@ -144,10 +147,20 @@ class FeedAdapter @Inject constructor(
             Log.d(TAG, "Could not find ViewHolder for position $position")
         }
     }
+    // Override onDetachedFromRecyclerView to clear the reference
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        this.recyclerView = null
+        Log.d(TAG, "Adapter detached from RecyclerView")
+    }
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        this.recyclerView = recyclerView
+        Log.d(TAG, "Adapter attached to RecyclerView")
+    }
 
     private fun getViewHolderForPosition(position: Int): ReelViewHolder? {
         return try {
-            val recyclerView = currentlyPlayingHolder?.binding?.root?.parent as? RecyclerView
             val holder = recyclerView?.findViewHolderForAdapterPosition(position) as? ReelViewHolder
             Log.d(TAG, "getViewHolderForPosition: position=$position, found=${holder != null}")
             holder
@@ -533,6 +546,15 @@ class FeedAdapter @Inject constructor(
                         .setMimeType(MimeTypes.APPLICATION_MPD)
                         .build()
 
+                    val loadControl = DefaultLoadControl.Builder()
+                        .setBufferDurationsMs(
+                            1000, // Min buffer ms
+                            3000, // Max buffer ms
+                            500,  // Buffer for playback ms
+                            1000  // Buffer for rebuffer ms
+                        )
+                        .build()
+
                     // Create DASH media source
                     val dashMediaSource = exoPlayerProvider.createDashMediaSource(dashManifestUrl)
 
@@ -541,8 +563,10 @@ class FeedAdapter @Inject constructor(
                     exoPlayer.prepare()
 
                     // Restore position and playback state
-                    exoPlayer.seekTo(currentPosition)
-                    exoPlayer.playWhenReady = wasPlaying
+//                    exoPlayer.seekTo(currentPosition)
+                    if (exoPlayer.playWhenReady != wasPlaying) {
+                        exoPlayer.playWhenReady = wasPlaying
+                    }
 
                     Log.d("VideoPlayer", "Switched to DASH playback at position $currentPosition")
                 } catch (e: Exception) {

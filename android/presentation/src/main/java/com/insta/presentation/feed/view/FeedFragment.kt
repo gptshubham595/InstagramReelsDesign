@@ -67,6 +67,7 @@ class FeedFragment : Fragment() {
         )
 
         binding.viewPager.apply {
+            val viewPager = this
             adapter = feedAdapter
             orientation = ViewPager2.ORIENTATION_VERTICAL
 
@@ -74,7 +75,6 @@ class FeedFragment : Fragment() {
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     super.onPageSelected(position)
-
                     // Mark the previously visible item as invisible
                     if (position != currentVisibleItem) {
                         feedAdapter.onItemInvisible(currentVisibleItem)

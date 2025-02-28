@@ -81,7 +81,7 @@ class ExoPlayerProvider @Inject constructor(
                 ) // Allow adaptive bitrate
             })
             .build()
-
+        player.repeatMode = Player.REPEAT_MODE_ONE
 
         // Add a player listener for detailed logging
         player.addListener(object : Player.Listener {
@@ -170,6 +170,15 @@ class ExoPlayerProvider @Inject constructor(
                         )
                     )
                     .createDataSource()
+                val trackSelector = DefaultTrackSelector(context)
+
+                // Improve track selection to avoid the "Unmatched track" error
+                trackSelector.parameters = trackSelector.buildUponParameters()
+                    .setMaxVideoSize(1280, 720) // Cap resolution to avoid excessive bandwidth
+                    .setForceHighestSupportedBitrate(false) // Allow adaptive quality
+                    .setExceedRendererCapabilitiesIfNecessary(true) // Handle capability mismatches better
+                    .setTunnelingEnabled(true) // Enable tunneling for smoother playback
+                    .build()
 
                 return LoggingDataSource(defaultDataSource)
             }
