@@ -6,6 +6,8 @@ const ffmpegPath = require('ffmpeg-static');
 const cors = require('cors');
 const mpd_generator = require('mpd-generator');
 const multer = require('multer');
+const { execSync } = require('child_process');
+const os = require('os');
 
 // Set ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -29,6 +31,19 @@ fs.ensureDirSync(path.join(__dirname, 'thumbnail'));
 // Processing queue
 const processingQueue = [];
 let isProcessing = false;
+
+function getLocalIP() {
+  const networkInterfaces = os.networkInterfaces();
+  for (const interfaceName in networkInterfaces) {
+    for (const iface of networkInterfaces[interfaceName]) {
+      // Skip over internal (i.e. 127.0.0.1) and non-IPv4 addresses
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
 
 // Process the next video in the queue
 async function processNextInQueue() {
@@ -130,6 +145,16 @@ app.get('/api/videos/:videoId', (req, res) => {
   } catch (error) {
     console.error(`Error fetching video ${videoId}:`, error);
     res.status(500).json({ error: 'Failed to fetch video metadata', details: error.message });
+  }
+});
+
+app.get('/getip', (req, res) => {
+  try {
+    const ip = getLocalIP();
+    res.send(ip);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed', details: error.message });
   }
 });
 
@@ -300,31 +325,52 @@ async function processVideo(videoPath, title, description) {
   const outputDir = path.join(__dirname, 'chunks', videoId);
   const thumbnailOutputDir = path.join(__dirname, 'thumbnail', videoId);
   fs.ensureDirSync(outputDir);
-  
+
   console.log(`Processing video: ${videoPath} (ID: ${videoId})`);
-  
+
   try {
     // Check if the video file exists
     const fullVideoPath = path.join(__dirname, videoPath);
     if (!fs.existsSync(fullVideoPath)) {
       throw new Error(`Video file not found: ${fullVideoPath}`);
     }
-    
-    // Get video duration
+
+    // Get original video information (resolution, bitrate, duration)
     const videoInfo = await getVideoInfo(fullVideoPath);
+    const originalWidth = videoInfo.width;
+    const originalHeight = videoInfo.height;
+    const originalBitrate = Number(videoInfo.bitrate);
     const duration = videoInfo.duration;
-    
+
     // Process video into chunks (3 seconds each)
     const chunkDuration = 3;
     const numberOfChunks = Math.ceil(duration / chunkDuration);
-    
+
+    // Define quality settings using the original resolution and bitrate percentages
     const qualities = [
-      { name: 'low', resolution: '480x270', videoBitrate: '400k', audioBitrate: '64k' },
-      { name: 'medium', resolution: '640x360', videoBitrate: '800k', audioBitrate: '96k' },
-      { name: 'high', resolution: '1280x720', videoBitrate: '2500k', audioBitrate: '128k' }
+      { 
+        name: 'low', 
+        // Maintain original resolution
+        resolution: `${originalWidth}x${originalHeight}`, 
+        // 70% of the original video bitrate
+        videoBitrate: `${Math.floor(originalBitrate * 0.7 / 1000)}k`, 
+        audioBitrate: '64k' 
+      },
+      { 
+        name: 'medium', 
+        resolution: `${originalWidth}x${originalHeight}`, 
+        videoBitrate: `${Math.floor(originalBitrate * 0.8 / 1000)}k`, 
+        audioBitrate: '96k' 
+      },
+      { 
+        name: 'high', 
+        resolution: `${originalWidth}x${originalHeight}`, 
+        videoBitrate: `${Math.floor(originalBitrate / 1000)}k`, 
+        audioBitrate: '128k' 
+      }
     ];
-    
-    // Create manifests structure
+
+    // Create manifest structure
     const manifestData = {
       id: videoId,
       title: title || 'Untitled Video',
@@ -336,15 +382,14 @@ async function processVideo(videoPath, title, description) {
       qualities,
       createdAt: new Date().toISOString()
     };
-    
-    // Create chunks for each quality
+
+    // Create chunks for each quality setting
     for (const quality of qualities) {
       for (let i = 0; i < numberOfChunks; i++) {
         const startTime = i * chunkDuration;
         const chunkFilename = `${videoId}_${quality.name}_chunk_${i}.mp4`;
         const chunkPath = path.join(outputDir, chunkFilename);
-        
-        // Process one chunk at a time to avoid overwhelming the system
+
         try {
           await createChunk(
             fullVideoPath,
@@ -356,11 +401,10 @@ async function processVideo(videoPath, title, description) {
           console.log(`Created chunk: ${chunkFilename}`);
         } catch (err) {
           console.error(`Error creating chunk ${chunkFilename}:`, err);
-          // Continue with other chunks even if one fails
         }
-        
-        // Add chunk to manifest
-        if (quality.name === 'medium') { // Base quality for manifest
+
+        // Use medium quality chunks for manifest info
+        if (quality.name === 'medium') {
           manifestData.chunks.push({
             index: i,
             startTime,
@@ -374,7 +418,7 @@ async function processVideo(videoPath, title, description) {
         }
       }
     }
-    
+
     // Generate thumbnail
     try {
       await createThumbnail(
@@ -384,17 +428,20 @@ async function processVideo(videoPath, title, description) {
       console.log('Created thumbnail');
     } catch (err) {
       console.error('Error creating thumbnail:', err);
-      // Continue even if thumbnail creation fails
     }
-    
-    await generateDashManifest(
-      videoId,
-      duration,
-      manifestData.chunks,
-      qualities
-    );
 
-    // Save metadata to file AFTER DASH generation
+    await ensureAudioChunks(videoId, manifestData.chunks.length);
+  
+  // Generate the manifest
+  const manifestPath = await generateDashManifest(
+    videoId, 
+    duration,
+    manifestData.chunks,
+    qualities
+  );
+
+
+    // Save metadata after generating DASH manifest
     const metadataPath = path.join(__dirname, 'metadata', `${videoId}.json`);
     fs.writeJSONSync(metadataPath, manifestData);
 
@@ -408,7 +455,6 @@ async function processVideo(videoPath, title, description) {
     console.error('Error in video processing:', error);
     throw error;
   }
-
 }
 
 // Helper function to get video information
@@ -444,6 +490,14 @@ function createChunk(inputPath, outputPath, startTime, duration, quality) {
       .videoBitrate(quality.videoBitrate)
       .audioCodec('aac')
       .audioBitrate(quality.audioBitrate)
+      // Add these options for DASH compatibility
+      .outputOptions([
+        '-movflags frag_keyframe+empty_moov+default_base_moof',
+        '-g 30',               // GOP size of 30 frames
+        '-keyint_min 30',      // Minimum keyframe interval
+        '-sc_threshold 0',     // Disable scene change detection
+        '-bf 0'                // No B-frames for better seeking
+      ])
       .format('mp4')
       .on('end', () => resolve(outputPath))
       .on('error', reject)
@@ -480,36 +534,63 @@ async function generateDashManifest(videoId, duration, chunks, qualities) {
   const manifestPath = path.join(outputDir, 'manifest.mpd');
   
   try {
-    // Create a standard MPD template that works with your chunked files
+    
+    const serverUrl = `http://${getLocalIP()}:3000`;
+
+    // First generate initialization segments for each quality
+    await generateInitSegments(videoId, qualities);
+    // Generate audio init segment
+    await generateAudioInitSegment(videoId);
+    
+    // Calculate segment duration in milliseconds and get max resolution
+    const segmentDuration = chunks[0].duration || 3000; // Default to 3000ms if not specified
+    const maxQuality = qualities.reduce((max, q) => {
+      const [width, height] = q.resolution.split('x').map(Number);
+      if (!max || width > max.width || height > max.height) {
+        return { width, height };
+      }
+      return max;
+    }, null);
+    
+    // Create MPD document
     let mpdContent = `<?xml version="1.0" encoding="utf-8"?>
 <MPD xmlns="urn:mpeg:dash:schema:mpd:2011" 
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
     xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd" 
-    profiles="urn:mpeg:dash:profile:isoff-live:2011" 
+    profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" 
     type="static" 
     minBufferTime="PT2S" 
     mediaPresentationDuration="PT${Math.round(duration)}S">
-    <Period id="1" start="PT0S">`;
     
-    // Add an adaptation set for each quality
+    <BaseURL>${serverUrl}/chunks/${videoId}/</BaseURL>
+    
+    <Period id="1" start="PT0S">
+        <AdaptationSet 
+            id="1"
+            contentType="video"
+            segmentAlignment="true" 
+            bitstreamSwitching="true"
+            maxWidth="${maxQuality.width}" 
+            maxHeight="${maxQuality.height}"
+            maxFrameRate="30">`;
+            
+    // Add each quality as a representation
     for (const quality of qualities) {
       // Convert bitrate from string (like "400k") to numeric value
       const bitrate = parseInt(quality.videoBitrate.replace('k', '000'));
       const [width, height] = quality.resolution.split('x').map(Number);
       
       mpdContent += `
-        <AdaptationSet 
-            mimeType="video/mp4" 
-            contentType="video"
-            segmentAlignment="true" 
-            bitstreamSwitching="true">
             <Representation 
                 id="${quality.name}" 
+                mimeType="video/mp4"
                 bandwidth="${bitrate}" 
                 width="${width}" 
                 height="${height}" 
-                codecs="avc1.4D401F">
-                <SegmentList duration="${chunks[0].duration}">`;
+                codecs="avc1.4D401F"
+                startWithSAP="1">
+                <SegmentList duration="${segmentDuration}" timescale="1000">
+                    <Initialization sourceURL="init-${quality.name}.mp4"/>`;
       
       // Add each chunk as a segment
       for (let i = 0; i < chunks.length; i++) {
@@ -521,12 +602,41 @@ async function generateDashManifest(videoId, duration, chunks, qualities) {
       
       mpdContent += `
                 </SegmentList>
-            </Representation>
-        </AdaptationSet>`;
+            </Representation>`;
     }
     
-    // Close the MPD structure
+    // Add audio adaptation set
     mpdContent += `
+        </AdaptationSet>
+        
+        <AdaptationSet 
+            id="2"
+            contentType="audio"
+            segmentAlignment="true">
+            <Representation 
+                id="audio" 
+                mimeType="audio/mp4" 
+                codecs="mp4a.40.2" 
+                bandwidth="128000" 
+                audioSamplingRate="44100">
+                <AudioChannelConfiguration 
+                    schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" 
+                    value="2"/>
+                <SegmentList duration="${segmentDuration}" timescale="1000">
+                    <Initialization sourceURL="init-audio.mp4"/>`;
+                    
+    // Add audio segments
+    for (let i = 0; i < chunks.length; i++) {
+      const audioChunkFile = `${videoId}_audio_chunk_${i}.mp4`;
+      
+      mpdContent += `
+                    <SegmentURL media="${audioChunkFile}" />`;
+    }
+    
+    mpdContent += `
+                </SegmentList>
+            </Representation>
+        </AdaptationSet>
     </Period>
 </MPD>`;
     
@@ -540,22 +650,92 @@ async function generateDashManifest(videoId, duration, chunks, qualities) {
   }
 }
 
-async function createInitSegment(videoId, quality, outputPath) {
-  const firstChunkPath = path.join(__dirname, 'chunks', videoId, `${videoId}_${quality.name}_chunk_0.mp4`);
+async function generateInitSegments(videoId, qualities) {
+  const outputDir = path.join(__dirname, 'chunks', videoId);
+  const results = [];
+
+  for (const quality of qualities) {
+    // Path to the first chunk for this quality
+    const firstChunkPath = path.join(outputDir, `${videoId}_${quality.name}_chunk_0.mp4`);
+    // Path for the initialization segment
+    const initSegmentPath = path.join(outputDir, `init-${quality.name}.mp4`);
+    
+    try {
+      // Use ffmpeg to extract initialization segment
+      const command = `ffmpeg -i "${firstChunkPath}" -c copy -map 0 -f mp4 -movflags frag_keyframe+empty_moov+default_base_moof+separate_moof -frames:v 0 "${initSegmentPath}"`;
+      
+      execSync(command);
+      console.log(`Created initialization segment for ${quality.name} quality`);
+      
+      results.push({
+        quality: quality.name,
+        path: `/chunks/${videoId}/init-${quality.name}.mp4`
+      });
+    } catch (error) {
+      console.error(`Error creating initialization segment for ${quality.name}:`, error);
+      throw error;
+    }
+  }
   
-  return new Promise((resolve, reject) => {
-    ffmpeg()
-      .input(firstChunkPath)
-      .outputOptions([
-        '-codec copy',
-        '-movflags empty_moov+default_base_moof+frag_keyframe'
-      ])
-      .output(outputPath)
-      .on('end', resolve)
-      .on('error', reject)
-      .run();
-  });
+  return results;
 }
+
+async function generateAudioInitSegment(videoId) {
+  const outputDir = path.join(__dirname, 'chunks', videoId);
+  // Use the first audio chunk as source
+  const audioChunkPath = path.join(outputDir, `${videoId}_audio_chunk_0.mp4`);
+  const initSegmentPath = path.join(outputDir, `init-audio.mp4`);
+
+  try {
+    // Check if audio chunk exists
+    if (!fs.existsSync(audioChunkPath)) {
+      // If separate audio chunks don't exist, use the first medium chunk
+      const mediumChunkPath = path.join(outputDir, `${videoId}_medium_chunk_0.mp4`);
+      
+      // Extract audio init segment from the medium chunk
+      const command = `ffmpeg -i "${mediumChunkPath}" -c copy -map 0:a -f mp4 -movflags frag_keyframe+empty_moov+default_base_moof+separate_moof -frames:a 0 "${initSegmentPath}"`;
+      
+      execSync(command);
+      console.log(`Created audio initialization segment from medium chunk`);
+    } else {
+      // Use dedicated audio chunk
+      const command = `ffmpeg -i "${audioChunkPath}" -c copy -map 0 -f mp4 -movflags frag_keyframe+empty_moov+default_base_moof+separate_moof -frames:a 0 "${initSegmentPath}"`;
+      
+      execSync(command);
+      console.log(`Created audio initialization segment`);
+    }
+    
+    return {
+      path: `/chunks/${videoId}/init-audio.mp4`
+    };
+  } catch (error) {
+    console.error(`Error creating audio initialization segment:`, error);
+    throw error;
+  }
+}
+
+// Helper function to ensure audio chunks exist
+async function ensureAudioChunks(videoId, chunksCount) {
+  const outputDir = path.join(__dirname, 'chunks', videoId);
+  
+  for (let i = 0; i < chunksCount; i++) {
+    const audioChunkPath = path.join(outputDir, `${videoId}_audio_chunk_${i}.mp4`);
+    const mediumChunkPath = path.join(outputDir, `${videoId}_medium_chunk_${i}.mp4`);
+    
+    // If audio chunk doesn't exist but medium chunk does, extract audio
+    if (!fs.existsSync(audioChunkPath) && fs.existsSync(mediumChunkPath)) {
+      try {
+        const command = `ffmpeg -i "${mediumChunkPath}" -c copy -map 0:a -f mp4 -movflags frag_keyframe+empty_moov+default_base_moof "${audioChunkPath}"`;
+        execSync(command);
+        console.log(`Created audio chunk ${i} from medium chunk`);
+      } catch (error) {
+        console.error(`Error creating audio chunk ${i}:`, error);
+      }
+    }
+  }
+}
+
+
 
 // Start server
 app.listen(PORT, () => {

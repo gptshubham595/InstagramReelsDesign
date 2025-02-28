@@ -10,7 +10,7 @@ import com.insta.domain.models.VideoResponse
 import com.insta.domain.repository.VideoRepository
 import javax.inject.Inject
 
-const val BASE_URL = "https://249b-49-43-242-243.ngrok-free.app"
+const val BASE_URL = "http://192.168.29.179:3000"
 
 class VideoRepositoryImpl @Inject constructor(private val apiService: ApiService) :
     VideoRepository {

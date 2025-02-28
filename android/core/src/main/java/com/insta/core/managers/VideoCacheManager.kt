@@ -36,15 +36,24 @@ class VideoCacheManager @Inject constructor(
     // Check if first chunk is already cached for a video
     fun isFirstChunkCached(videoId: String): Boolean {
         val firstChunkFile = File(cacheDir, "${videoId}_0_low.mp4")
-        return firstChunkFile.exists() && firstChunkFile.length() > 0
+        val isCached = firstChunkFile.exists() && firstChunkFile.length() > 0
+        Log.d(TAG, "======================================")
+        Log.d(TAG, "isFirstChunkCached: videoId=$videoId, isCached=$isCached")
+        Log.d(TAG, "file exists=${firstChunkFile.exists()}, size=${firstChunkFile.length()}")
+        Log.d(TAG, "======================================")
+        return isCached
     }
 
     // Get local file path of first cached chunk
     fun getFirstChunkPath(videoId: String): String? {
         val firstChunkFile = File(cacheDir, "${videoId}_0_low.mp4")
-        return if (firstChunkFile.exists() && firstChunkFile.length() > 0) {
+        val path = if (firstChunkFile.exists() && firstChunkFile.length() > 0) {
             firstChunkFile.absolutePath
         } else null
+        Log.d(TAG, "======================================")
+        Log.d(TAG, "getFirstChunkPath: videoId=$videoId, path=$path")
+        Log.d(TAG, "======================================")
+        return path
     }
 
     // Download first chunk of a video (low quality for faster loading)
@@ -56,14 +65,20 @@ class VideoCacheManager @Inject constructor(
         // Construct a key that includes quality level
         val chunkKey = "${videoId}_0_low.mp4"
 
+        Log.d(TAG, "======================================")
+        Log.d(TAG, "downloadFirstChunk START: videoId=$videoId, chunkKey=$chunkKey")
+        Log.d(TAG, "URL: $lowQualityUrl")
+
         // Check if already downloaded or being downloaded
         if (isFirstChunkCached(videoId) || downloadingChunks[chunkKey] == true) {
             Log.d(TAG, "First chunk already cached or downloading: $chunkKey")
+            Log.d(TAG, "======================================")
             return true
         }
 
         // Mark as downloading
         downloadingChunks[chunkKey] = true
+        Log.d(TAG, "Marked as downloading: $chunkKey")
 
         return try {
             withContext(Dispatchers.IO) {
@@ -73,6 +88,7 @@ class VideoCacheManager @Inject constructor(
                 val response = okHttpClient.newCall(request).execute()
 
                 if (!response.isSuccessful) {
+                    Log.e(TAG, "Download failed with code: ${response.code}")
                     throw IOException("Failed to download chunk: ${response.code}")
                 }
 
@@ -81,11 +97,14 @@ class VideoCacheManager @Inject constructor(
                     response.body?.byteStream()?.copyTo(fileOutputStream)
                 }
 
-                Log.d(TAG, "Successfully downloaded first chunk: $chunkKey")
+                Log.d(TAG, "Successfully downloaded first chunk: $chunkKey, size=${outputFile.length()}")
+                Log.d(TAG, "======================================")
                 true
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading first chunk: ${e.message}")
+            Log.e(TAG, "Exception: ${e.stackTraceToString()}")
+            Log.d(TAG, "======================================")
             false
         } finally {
             downloadingChunks.remove(chunkKey)
@@ -97,13 +116,20 @@ class VideoCacheManager @Inject constructor(
 
     // Add listener for download completion
     fun addDownloadCompletionListener(chunkKey: String, listener: () -> Unit) {
+        Log.d(TAG, "======================================")
+        Log.d(TAG, "addDownloadCompletionListener: chunkKey=$chunkKey")
         downloadCompletionListeners.getOrPut(chunkKey) { mutableListOf() }.add(listener)
+        Log.d(TAG, "Total listeners for $chunkKey: ${downloadCompletionListeners[chunkKey]?.size ?: 0}")
+        Log.d(TAG, "======================================")
     }
 
     // Preload next 3 chunks after user has watched for 2 seconds
     suspend fun preloadNextChunks(video: VideoResponse, currentChunkIndex: Int = 0): Boolean {
         val videoId = video.id ?: return false
         val chunks = video.chunks ?: return false
+
+        Log.d(TAG, "======================================")
+        Log.d(TAG, "preloadNextChunks START: videoId=$videoId, currentChunkIndex=$currentChunkIndex")
 
         // Calculate which chunks to preload (next 3 chunks after current)
         val chunksToPreload =
@@ -112,9 +138,11 @@ class VideoCacheManager @Inject constructor(
 
         if (chunksToPreload.isEmpty()) {
             Log.d(TAG, "No more chunks to preload")
+            Log.d(TAG, "======================================")
             return true
         }
 
+        Log.d(TAG, "Chunks to preload: ${chunksToPreload.map { it.index }}")
         var success = true
 
         // Download each chunk (medium quality for balance between speed and quality)
@@ -126,24 +154,22 @@ class VideoCacheManager @Inject constructor(
                         val mediumQualityUrl = chunk.urls?.medium ?: return@async false
                         val chunkKey = "${videoId}_${index}_medium.mp4"
 
+                        Log.d(TAG, "Checking chunk: $chunkKey")
                         // Skip if already cached or downloading
-                        if (File(
-                                cacheDir,
-                                chunkKey
-                            ).exists() || downloadingChunks[chunkKey] == true
-                        ) {
+                        if (File(cacheDir, chunkKey).exists() || downloadingChunks[chunkKey] == true) {
+                            Log.d(TAG, "Chunk already cached or downloading: $chunkKey")
                             return@async true
                         }
 
                         // Mark as downloading
                         downloadingChunks[chunkKey] = true
-
-                        Log.d(TAG, "Preloading chunk: $chunkKey")
+                        Log.d(TAG, "Preloading chunk: $chunkKey, URL: $mediumQualityUrl")
 
                         val request = Request.Builder().url(mediumQualityUrl).build()
                         val response = okHttpClient.newCall(request).execute()
 
                         if (!response.isSuccessful) {
+                            Log.e(TAG, "Failed to download chunk: ${response.code}")
                             throw IOException("Failed to download chunk: ${response.code}")
                         }
 
@@ -152,10 +178,11 @@ class VideoCacheManager @Inject constructor(
                             response.body?.byteStream()?.copyTo(fileOutputStream)
                         }
 
-                        Log.d(TAG, "Successfully preloaded chunk: $chunkKey")
+                        Log.d(TAG, "Successfully preloaded chunk: $chunkKey, size=${outputFile.length()}")
                         true
                     } catch (e: Exception) {
                         Log.e(TAG, "Error preloading chunk: ${e.message}")
+                        Log.e(TAG, "Exception: ${e.stackTraceToString()}")
                         success = false
                         false
                     } finally {
@@ -168,22 +195,28 @@ class VideoCacheManager @Inject constructor(
         // Clean up old chunks if needed
         cleanupOldChunks()
 
+        Log.d(TAG, "preloadNextChunks finished with success=$success")
+        Log.d(TAG, "======================================")
         return success
     }
 
     // Clean up old chunks to prevent cache from growing too large
     private fun cleanupOldChunks() {
         val files = cacheDir.listFiles() ?: return
+        Log.d(TAG, "cleanupOldChunks: total files=${files.size}, max allowed=$MAX_CHUNKS_TO_CACHE")
 
         if (files.size > MAX_CHUNKS_TO_CACHE) {
             // Sort by last modified (oldest first)
             val filesToDelete = files.sortedBy { it.lastModified() }
                 .take(files.size - MAX_CHUNKS_TO_CACHE)
 
+            Log.d(TAG, "Will delete ${filesToDelete.size} old chunks")
             for (file in filesToDelete) {
                 try {
                     if (file.delete()) {
                         Log.d(TAG, "Deleted old chunk: ${file.name}")
+                    } else {
+                        Log.e(TAG, "Failed to delete old chunk: ${file.name}")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error deleting old chunk: ${e.message}")
@@ -195,10 +228,18 @@ class VideoCacheManager @Inject constructor(
     // Clear all cached chunks (e.g., when user clears app data)
     fun clearCache() {
         try {
-            cacheDir.listFiles()?.forEach { it.delete() }
+            val fileCount = cacheDir.listFiles()?.size ?: 0
+            Log.d(TAG, "======================================")
+            Log.d(TAG, "clearCache: Clearing $fileCount cached files")
+            cacheDir.listFiles()?.forEach {
+                val deleted = it.delete()
+                Log.d(TAG, "Deleted ${it.name}: $deleted")
+            }
             Log.d(TAG, "Cleared video chunk cache")
+            Log.d(TAG, "======================================")
         } catch (e: Exception) {
             Log.e(TAG, "Error clearing cache: ${e.message}")
+            Log.e(TAG, "Exception: ${e.stackTraceToString()}")
         }
     }
 }

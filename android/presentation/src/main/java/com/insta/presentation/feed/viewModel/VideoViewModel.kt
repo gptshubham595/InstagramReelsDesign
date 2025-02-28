@@ -1,5 +1,6 @@
 package com.insta.presentation.feed.viewModel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.insta.domain.models.VideoResponse
@@ -22,6 +23,8 @@ class VideoViewModel @Inject constructor(
     fun getVideo(videoId: String) {
         viewModelScope.launch {
             try {
+                Log.d("VideoViewModel", "===============================")
+                Log.d("VideoViewModel", "getVideo $videoId")
                 val video = getVideoUseCase(videoId)
                 _videoState.update {
                     it.copy(
@@ -29,6 +32,8 @@ class VideoViewModel @Inject constructor(
                         isLoading = false
                     )
                 }
+                Log.d("VideoViewModel", "$videoId -> $video")
+                Log.d("VideoViewModel", "===============================")
             } catch (e: Exception) {
                 _videoState.update {
                     it.copy(

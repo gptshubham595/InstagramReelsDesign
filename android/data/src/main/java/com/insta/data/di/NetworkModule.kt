@@ -14,7 +14,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
-const val BASE_URL = "https://249b-49-43-242-243.ngrok-free.app/"
+const val BASE_URL = "http://192.168.29.179:3000/"
 
 @Module
 @InstallIn(SingletonComponent::class)

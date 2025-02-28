@@ -1,5 +1,6 @@
 package com.insta.presentation.feed.viewModel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.insta.domain.models.VideoResponse
@@ -25,16 +26,20 @@ class FeedViewModel @Inject constructor(
     }
 
     fun fetchNextPage() {
+        Log.d("FeedViewModel", "===============================")
+        Log.d("FeedViewModel", "fetchNextPage $currentPage")
         viewModelScope.launch {
             try {
-                val videos = getFeedUseCase(currentPage)
+                val videosList = getFeedUseCase(currentPage)
                 _feedState.update {
                     it.copy(
-                        videos = it.videos + videos,
+                        videos = it.videos + videosList,
                         isLoading = false,
                         page = currentPage
                     )
                 }
+                Log.d("FeedViewModel", "$currentPage -> $videosList")
+                Log.d("FeedViewModel", "===============================")
                 currentPage++
             } catch (e: Exception) {
                 _feedState.update {
