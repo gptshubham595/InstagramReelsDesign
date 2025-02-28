@@ -9,18 +9,5 @@
         android:id="@+id/feedFragment"
         android:name="com.insta.presentation.feed.view.FeedFragment"
         android:label="fragment_feed"
-        tools:layout="@layout/fragment_feed">
-        <action
-            android:id="@+id/action_feedFragment_to_videoFragment"
-            app:destination="@id/videoFragment" />
-    </fragment>
-    <fragment
-        android:id="@+id/videoFragment"
-        android:name="com.insta.presentation.feed.view.VideoFragment"
-        android:label="fragment_video"
-        tools:layout="@layout/fragment_video">
-        <argument
-            android:name="videoId"
-            app:argType="string" />
-    </fragment>
+        tools:layout="@layout/fragment_feed" />
 </navigation>

@@ -9,23 +9,28 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.fragment.findNavController
+import androidx.media3.common.util.UnstableApi
 import androidx.viewpager2.widget.ViewPager2
 import com.insta.core.di.ExoPlayerProvider
 import com.insta.core.managers.VideoCacheManager
 import com.insta.presentation.databinding.FragmentFeedBinding
 import com.insta.presentation.feed.adapter.FeedAdapter
 import com.insta.presentation.feed.viewModel.FeedViewModel
+import com.insta.presentation.feed.viewModel.VideoViewModel
+import com.insta.presentation.helper.hide
+import com.insta.presentation.helper.show
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@UnstableApi
 @AndroidEntryPoint
 class FeedFragment : Fragment() {
     private var _binding: FragmentFeedBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: FeedViewModel by viewModels()
+    private val feedViewModel: FeedViewModel by viewModels()
+    private val videoViewModel: VideoViewModel by viewModels()
 
     @Inject
     lateinit var videoCacheManager: VideoCacheManager
@@ -59,10 +64,7 @@ class FeedFragment : Fragment() {
             lifecycleOwner = viewLifecycleOwner,
             videoCacheManager = videoCacheManager,
             exoPlayerProvider = exoPlayerProvider
-        ) { videoId ->
-            val action = FeedFragmentDirections.actionFeedFragmentToVideoFragment(videoId)
-            findNavController().navigate(action)
-        }
+        )
 
         binding.viewPager.apply {
             adapter = feedAdapter
@@ -84,7 +86,7 @@ class FeedFragment : Fragment() {
 
                     // Load more content when reaching end
                     if (position >= feedAdapter.itemCount - 2) {
-                        viewModel.fetchNextPage()
+                        feedViewModel.fetchNextPage()
                     }
                 }
             })
@@ -94,22 +96,22 @@ class FeedFragment : Fragment() {
     private fun observeFeedState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.feedState.collectLatest { state ->
+                feedViewModel.feedState.collectLatest { state ->
                     when {
                         state.isLoading && feedAdapter.itemCount == 0 -> {
-                            binding.progressBar.visibility = View.VISIBLE
-                            binding.errorText.visibility = View.GONE
+                            binding.progressBar.show()
+                            binding.errorText.hide()
                         }
 
                         state.error != null && feedAdapter.itemCount == 0 -> {
-                            binding.progressBar.visibility = View.GONE
-                            binding.errorText.visibility = View.VISIBLE
+                            binding.progressBar.hide()
+                            binding.errorText.show()
                             binding.errorText.text = state.error
                         }
 
                         else -> {
-                            binding.progressBar.visibility = View.GONE
-                            binding.errorText.visibility = View.GONE
+                            binding.progressBar.hide()
+                            binding.errorText.hide()
 
                             val newVideos = state.videos.filter { video ->
                                 feedAdapter.videos.none { it.id == video.id }
