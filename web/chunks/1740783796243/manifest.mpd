@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd" 
+    profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" 
+    type="static" 
+    minBufferTime="PT2S" 
+    mediaPresentationDuration="PT13S">
+    
+    <BaseURL>http://192.168.29.179:3000/chunks/1740783796243/</BaseURL>
+    
+    <Period id="1" start="PT0S">
+        <AdaptationSet 
+            id="1"
+            contentType="video"
+            segmentAlignment="true" 
+            bitstreamSwitching="true"
+            maxWidth="360" 
+            maxHeight="640"
+            maxFrameRate="30">
+            <Representation 
+                id="low" 
+                mimeType="video/mp4"
+                bandwidth="388000" 
+                width="360" 
+                height="640" 
+                codecs="avc1.4D401F"
+                startWithSAP="1">
+                <SegmentList duration="3" timescale="1000">
+                    <Initialization sourceURL="init-low.mp4"/>
+                    <SegmentURL media="1740783796243_low_chunk_0.mp4" />
+                    <SegmentURL media="1740783796243_low_chunk_1.mp4" />
+                    <SegmentURL media="1740783796243_low_chunk_2.mp4" />
+                    <SegmentURL media="1740783796243_low_chunk_3.mp4" />
+                    <SegmentURL media="1740783796243_low_chunk_4.mp4" />
+                </SegmentList>
+            </Representation>
+            <Representation 
+                id="medium" 
+                mimeType="video/mp4"
+                bandwidth="444000" 
+                width="360" 
+                height="640" 
+                codecs="avc1.4D401F"
+                startWithSAP="1">
+                <SegmentList duration="3" timescale="1000">
+                    <Initialization sourceURL="init-medium.mp4"/>
+                    <SegmentURL media="1740783796243_medium_chunk_0.mp4" />
+                    <SegmentURL media="1740783796243_medium_chunk_1.mp4" />
+                    <SegmentURL media="1740783796243_medium_chunk_2.mp4" />
+                    <SegmentURL media="1740783796243_medium_chunk_3.mp4" />
+                    <SegmentURL media="1740783796243_medium_chunk_4.mp4" />
+                </SegmentList>
+            </Representation>
+            <Representation 
+                id="high" 
+                mimeType="video/mp4"
+                bandwidth="555000" 
+                width="360" 
+                height="640" 
+                codecs="avc1.4D401F"
+                startWithSAP="1">
+                <SegmentList duration="3" timescale="1000">
+                    <Initialization sourceURL="init-high.mp4"/>
+                    <SegmentURL media="1740783796243_high_chunk_0.mp4" />
+                    <SegmentURL media="1740783796243_high_chunk_1.mp4" />
+                    <SegmentURL media="1740783796243_high_chunk_2.mp4" />
+                    <SegmentURL media="1740783796243_high_chunk_3.mp4" />
+                    <SegmentURL media="1740783796243_high_chunk_4.mp4" />
+                </SegmentList>
+            </Representation>
+        </AdaptationSet>
+        
+        <AdaptationSet 
+            id="2"
+            contentType="audio"
+            segmentAlignment="true">
+            <Representation 
+                id="audio" 
+                mimeType="audio/mp4" 
+                codecs="mp4a.40.2" 
+                bandwidth="128000" 
+                audioSamplingRate="44100">
+                <AudioChannelConfiguration 
+                    schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" 
+                    value="2"/>
+                <SegmentList duration="3" timescale="1000">
+                    <Initialization sourceURL="init-audio.mp4"/>
+                    <SegmentURL media="1740783796243_audio_chunk_0.mp4" />
+                    <SegmentURL media="1740783796243_audio_chunk_1.mp4" />
+                    <SegmentURL media="1740783796243_audio_chunk_2.mp4" />
+                    <SegmentURL media="1740783796243_audio_chunk_3.mp4" />
+                    <SegmentURL media="1740783796243_audio_chunk_4.mp4" />
+                </SegmentList>
+            </Representation>
+        </AdaptationSet>
+    </Period>
+</MPD>
