@@ -116,11 +116,8 @@ class FeedAdapter @Inject constructor(
         visibleItems.remove(position)
         Log.d(TAG, "Current visible items after removal: $visibleItems")
 
-        // If this was the currently playing item, stop it
-        if (currentlyPlayingHolder?.bindingAdapterPosition == position) {
-            Log.d(TAG, "Releasing current player for position=$position")
-            releaseCurrentPlayer()
-        }
+        Log.d(TAG, "Releasing current player for position=$position")
+        releaseCurrentPlayer()
         Log.d(TAG, "======================================")
     }
 

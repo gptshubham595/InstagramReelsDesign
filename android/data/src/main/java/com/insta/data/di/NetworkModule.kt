@@ -14,12 +14,11 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
-const val BASE_URL = "http://192.168.29.179:3000/"
+const val PORT = "3000" // Store port as a constant
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-
 
     @Provides
     @Singleton
@@ -34,10 +33,16 @@ object NetworkModule {
     }
 
     @Provides
+    fun provideLocalIpAddress(): String {
+        val localIpAddress = BASE_URL
+        return "http://$localIpAddress:$PORT"
+    }
+
+    @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient, baseUrl: String): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl("$baseUrl/")
             .addConverterFactory(GsonConverterFactory.create())
             .client(okHttpClient)
             .build()
